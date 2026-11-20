@@ -16,7 +16,11 @@ jobs:
 
       - name: Unpack project
         run: |
-          base64 -d project.b64 > project.zip
+          echo "file size: $(wc -c < project.b64) bytes (expected 28531)"
+          tr -cd 'A-Za-z0-9+/=' < project.b64 > clean.b64
+          echo "clean size: $(wc -c < clean.b64) chars (expected 28160)"
+          base64 -d clean.b64 > project.zip
+          unzip -tq project.zip
           unzip -q project.zip -d src
           sed -i '/aliyun/d' src/settings.gradle.kts
 
