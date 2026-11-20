@@ -1,0 +1,49 @@
+name: Build APK v2
+
+on:
+  workflow_dispatch:
+    inputs:
+      voice_url:
+        description: "Voice server address, e.g. https://voice.example.com (can be empty)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack project
+        run: |
+          for f in part1.b64 part2.b64 part3.b64; do
+            echo "$f: $(wc -c < $f) bytes"
+          done
+          echo "(expected 9625, 9625, 9281)"
+          cat part1.b64 part2.b64 part3.b64 | tr -cd 'A-Za-z0-9+/=' > clean.b64
+          echo "clean size: $(wc -c < clean.b64) chars (expected 28160)"
+          base64 -d clean.b64 > project.zip
+          unzip -tq project.zip
+          unzip -q project.zip -d src
+          sed -i '/aliyun/d' src/settings.gradle.kts
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build APK
+        working-directory: src
+        env:
+          VOICE_URL: ${{ inputs.voice_url }}
+        run: gradle assembleDebug -PvoiceUrl="$VOICE_URL"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VoiceChat-apk
+          path: src/app/build/outputs/apk/debug/app-debug.apk
+          
