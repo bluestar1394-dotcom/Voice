@@ -1,0 +1,41 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      voice_url:
+        description: "Voice server address, e.g. https://voice.example.com (can be empty)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack project
+        run: |
+          base64 -d project.b64 > project.zip
+          unzip -q project.zip -d src
+          sed -i '/aliyun/d' src/settings.gradle.kts
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build APK
+        working-directory: src
+        env:
+          VOICE_URL: ${{ inputs.voice_url }}
+        run: gradle assembleDebug -PvoiceUrl="$VOICE_URL"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VoiceChat-apk
+          path: src/app/build/outputs/apk/debug/app-debug.apk
